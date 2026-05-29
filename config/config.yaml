@@ -1,0 +1,82 @@
+# ================================
+# WNBA Predictions Configuration
+# ================================
+
+data:
+  # Seasons to fetch (WNBA started 1997; Action Network odds available from ~2018)
+  seasons:
+    - 2018
+    - 2019
+    - 2020
+    - 2021
+    - 2022
+    - 2023
+    - 2024
+    - 2025
+    - 2026
+  raw_dir: data/raw
+  processed_dir: data/processed
+  external_dir: data/external
+
+features:
+  # Rolling window sizes for recent-form features
+  rolling_windows: [3, 5, 10]
+  # Minimum games played before a team is included in predictions
+  min_games: 5
+
+model:
+  # Primary model type: "xgboost", "lightgbm", "logistic", "ensemble"
+  # "ensemble" trains XGBoost + LightGBM and averages their calibrated probabilities
+  type: ensemble
+  test_size: 0.2
+  random_state: 42
+  cv_folds: 5
+  artifacts_dir: models/artifacts
+  ou_artifacts_dir: models/artifacts_ou
+
+  xgboost:
+    n_estimators: 200
+    max_depth: 3
+    learning_rate: 0.02
+    subsample: 0.65
+    colsample_bytree: 0.4
+    min_child_weight: 20
+    gamma: 1.5
+    reg_alpha: 2.0
+    reg_lambda: 8.0
+
+  lightgbm:
+    n_estimators: 200
+    max_depth: 3
+    learning_rate: 0.02
+    num_leaves: 15
+    subsample: 0.65
+    colsample_bytree: 0.4
+    min_child_samples: 30
+    reg_alpha: 2.0
+    reg_lambda: 8.0
+
+  logistic:
+    C: 1.0
+    max_iter: 1000
+    solver: lbfgs
+
+betting:
+  # Juice / vig assumed on both sides (standard -110)
+  vig: -110
+  # Minimum edge required to flag a bet (model-only, no market line available)
+  min_edge: 0.05
+  # Minimum CLV edge (|model_prob - market_implied|) to recommend a bet
+  # 0.05 = model must disagree with the closing line by ≥5 pp to be flagged
+  min_clv_edge: 0.05
+
+odds_api:
+  # Set ODDS_API_KEY in your .env file
+  base_url: https://api.the-odds-api.com/v4
+  sport: basketball_wnba
+  markets: spreads
+  regions: us
+
+logging:
+  level: INFO
+  format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"

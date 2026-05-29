@@ -1,0 +1,2 @@
+# Data directory — populated at runtime by the pipeline.
+# Raw ESPN responses and odds files are cached here as Parquet.

@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "predict: train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predict.py",
+            "args": ["train"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "predict: predict",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predict.py",
+            "args": ["predict"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "predict: evaluate",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predict.py",
+            "args": ["evaluate"],
+            "console": "integratedTerminal"
+        }
+    ]
+}
