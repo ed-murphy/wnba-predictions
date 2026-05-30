@@ -1,6 +1,6 @@
 # wnba-predictions
 
-A machine learning system that models WNBA team form and flags games where the model disagrees with the closing betting line -- and by how much.
+Models WNBA team form and flags games where the model disagrees with the closing betting line -- and by how much.
 
 **No API keys required.** Data is sourced from ESPN and Action Network, both free and public.
 
@@ -8,9 +8,9 @@ A machine learning system that models WNBA team form and flags games where the m
 
 ## How it works
 
-Every WNBA game has a spread set by bookmakers. This system builds ~780 features per game -- rolling form, four factors, pace/ratings, rest, travel, line movement, and public betting percentages -- then trains an XGBoost/LightGBM ensemble to predict the probability that each side covers.
+This system builds ~780 features per WNBA game and then trains an XGBoost/LightGBM ensemble to predict the probability that each side covers.
 
-Games where the model's probability disagrees with the market's implied probability by 5+ percentage points are flagged as value bets (*). Backtesting on 2018-2026 data shows roughly **+5% ROI** on those flagged games on the ATS side, compared to the roughly -5% a random bettor expects after vig.
+Games where the model's probability disagrees with the market's implied probability by 5+ percentage points are flagged as value bets. Backtesting on 2018-2026 data shows roughly **+5% ROI** on those flagged games on the ATS side, compared to the roughly -5% a random bettor would expect after vig.
 
 A strict temporal 80/20 split (no shuffling) is used throughout to prevent data leakage.
 
@@ -18,38 +18,61 @@ A strict temporal 80/20 split (no shuffling) is used throughout to prevent data 
 
 ## Quickstart
 
-\\ash
+```bash
 git clone https://github.com/yourname/wnba-predictions
 cd wnba-predictions
 python -m venv .venv
+```
 
-# Windows
+### Windows
+
+```powershell
 .\.venv\Scripts\Activate.ps1
-# macOS / Linux
+```
+
+### macOS / Linux
+
+```bash
 source .venv/bin/activate
+```
 
+```bash
 pip install -r requirements.txt
-\
-**Train** (downloads all data automatically on first run, ~2 min):
-\\ash
-python predict.py train --seasons 2018 2019 2020 2021 2022 2023 2024 2025 2026
-\
-**Generate today's picks:**
-\\ash
-python predict.py predict
-\
-\  Away      Home      Favorite     Pick       Conf    Mkt Edge
-  Storm     Aces      Aces -5.5    AWAY CVR   54.2%   -0.087 *
-  Sky       Dream     Pick'em      HOME CVR   51.8%   +0.018
-  Fever     Lynx      Lynx -3.0    HOME CVR   53.1%   +0.063 *
+```
 
-  * = model disagrees with market by >= 5 pp (value bet)
-  Mkt Edge = model_prob - market_implied  (+ favors home, - favors away)
-\
-**Evaluate on held-out test data:**
-\\ash
+### Train
+
+Downloads all data automatically on first run (~2 minutes).
+
+```bash
+python predict.py train --seasons 2018 2019 2020 2021 2022 2023 2024 2025 2026
+```
+
+### Generate Today's Picks
+
+```bash
+python predict.py predict
+```
+
+Example output:
+
+```text
+Away      Home      Favorite     Pick       Conf    Mkt Edge
+Storm     Aces      Aces -5.5    AWAY CVR   54.2%   -0.087 *
+Sky       Dream     Pick'em      HOME CVR   51.8%   +0.018
+Fever     Lynx      Lynx -3.0    HOME CVR   53.1%   +0.063 *
+
+* = model disagrees with market by >= 5 pp (value bet)
+Mkt Edge = model_prob - market_implied
+           (+ favors home, - favors away)
+```
+
+### Evaluate on Held-Out Test Data
+
+```bash
 python predict.py evaluate
-\
+```
+
 ---
 
 ## Results (2018-2026, last 20% held out, ~388 games)
@@ -101,11 +124,11 @@ tests/                  # pytest suite
 
 ## Running tests
 
-\\ash
+```bash
 pytest tests/ -v
-\
+```
 ---
 
 ## Disclaimer
 
-This is a research tool. Sports betting involves substantial financial risk. Past backtested performance does not guarantee future results. Use responsibly.
+This is a research tool. Sports betting involves financial risk. Past backtested performance does not guarantee future results.
