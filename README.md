@@ -19,7 +19,9 @@ All features use only data available before tip-off, and training uses a strict 
 
 ---
 
-## Quickstart
+## How to use the model
+
+### First, clone it and create a venv
 
 ```bash
 git clone https://github.com/ed-murphy/wnba-predictions
@@ -27,31 +29,33 @@ cd wnba-predictions
 python -m venv .venv
 ```
 
-### Windows
+### Then, activate the virtual environment
+
+#### Windows
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-### macOS / Linux
+#### macOS / Linux
 
 ```bash
 source .venv/bin/activate
 ```
 
+### After that, install required packages
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### Train
-
-Downloads all data automatically on first run (~2 minutes).
+### Next, train the model
 
 ```bash
 python predict.py train --seasons 2018 2019 2020 2021 2022 2023 2024 2025 2026
 ```
 
-### Generate Today's Picks
+### Finally, generate today's picks
 
 ```bash
 python predict.py predict
@@ -70,7 +74,7 @@ Mkt Edge = model_prob - market_implied
            (+ favors home, - favors away)
 ```
 
-### Evaluate Model on Held-Out Test Data
+### Last (if desired), evaluate Model on Held-Out Test Data
 
 ```bash
 python predict.py evaluate
