@@ -8,7 +8,7 @@ Models WNBA team form and flags disagreements with betting lines.
 
 ## How it works
 
-The system builds ~780 features per game -- rolling form, four factors, pace and efficiency ratings, rest, travel, line movement, and public betting percentages -- then trains separate XGBoost/LightGBM ensembles to predict spread coverage (ATS) and totals (O/U).
+The system builds 699 features per game -- including rolling form, four factors, pace and efficiency ratings, rest, travel, head-to-head record, line movement, and public betting percentages, among others -- then trains separate XGBoost/LightGBM ensembles to predict spread coverage (ATS) and totals (O/U).
 
 Backtesting on data back to 2018:
 
@@ -95,9 +95,7 @@ python predict.py evaluate
 |---|---|
 | Test accuracy | 52.3% |
 | Flat-bet ROI | -1.9% |
-| ROI on >=5% edge bets | +2.6% (372 bets) |
-
-Breakeven at -110 vig requires >= 52.4% win rate.
+| ROI on >=55% confidence bets | +2.6% (372 bets) |
 
 ---
 
@@ -111,7 +109,7 @@ src/
     action_network_scraper.py  # Historical odds & line movement
     line_movement.py    # Open/close movement, steam detection
     processor.py        # Cleaning, merging, ATS/O/U labeling
-  features/engineer.py  # Feature pipeline (~780 features)
+  features/engineer.py  # Feature pipeline (699 features)
   models/
     train.py            # Ensemble training + calibration
     evaluate.py         # ATS/CLV metrics
