@@ -22,7 +22,7 @@ All features use only data available before tip-off, and training uses a strict 
 ## Quickstart
 
 ```bash
-git clone https://github.com/yourname/wnba-predictions
+git clone https://github.com/ed-murphy/wnba-predictions
 cd wnba-predictions
 python -m venv .venv
 ```
