@@ -1,6 +1,6 @@
 # wnba-predictions
 
-Models WNBA team form and flags games where the model disagrees with the closing betting line -- and by how much.
+Models WNBA team form and flags disagreements with betting lines.
 
 **No API keys required.** Data is sourced from ESPN and Action Network, both free and public.
 
@@ -8,11 +8,14 @@ Models WNBA team form and flags games where the model disagrees with the closing
 
 ## How it works
 
-This system builds ~780 features per WNBA game and then trains an XGBoost/LightGBM ensemble to predict the probability that each side covers.
+The system builds ~780 features per game -- rolling form, four factors, pace and efficiency ratings, rest, travel, line movement, and public betting percentages -- then trains separate XGBoost/LightGBM ensembles to predict spread coverage (ATS) and totals (O/U).
 
-Games where the model's probability disagrees with the market's implied probability by 5+ percentage points are flagged as value bets. Backtesting on 2018-2026 data shows roughly **+5% ROI** on those flagged games on the ATS side, compared to the roughly -5% a random bettor would expect after vig.
+Backtesting on data back to 2018:
 
-A strict temporal 80/20 split (no shuffling) is used throughout to prevent data leakage.
+- **ATS**: when the model's probability disagrees with the market's closing implied probability by 5+ percentage points, those flagged games return roughly **+5% ROI** -- compared to the roughly -5% a random bettor expects after vig.
+- **O/U**: games where the model's confidence exceeds 55% (i.e. 5+ pp from 50/50) return roughly **+2.6% ROI**, though this is a raw confidence threshold rather than a true market comparison -- the O/U model has no equivalent closing-line implied probability to compare against.
+
+All features use only data available before tip-off, and training uses a strict temporal 80/20 split with no shuffling, so the backtest reflects real deployment conditions.
 
 ---
 
@@ -67,7 +70,7 @@ Mkt Edge = model_prob - market_implied
            (+ favors home, - favors away)
 ```
 
-### Evaluate on Held-Out Test Data
+### Evaluate Model on Held-Out Test Data
 
 ```bash
 python predict.py evaluate
@@ -86,7 +89,7 @@ python predict.py evaluate
 | ROI on >=5% edge bets | +5.2% (372 bets) |
 | ROI on >=7% edge bets | +6.2% (354 bets) |
 
-**O/U model** (treat with more caution -- larger train/test gap)
+**O/U model**
 
 | Metric | Value |
 |---|---|
