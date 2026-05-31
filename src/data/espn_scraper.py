@@ -38,19 +38,30 @@ class ESPNScraper:
     # Public API
     # ------------------------------------------------------------------
 
-    def fetch_season_schedule(self, season: int) -> pd.DataFrame:
+    def fetch_season_schedule(self, season: int, cache_ttl_hours: float = 4.0) -> pd.DataFrame:
         """Return every completed regular-season game for *season*.
 
-        For past seasons the result is cached permanently.  For the current
-        in-progress season the cache is always bypassed so that last night's
-        completed games are included in today's rolling features.
+        Past seasons are cached permanently.  The current season is cached
+        with a TTL of ``cache_ttl_hours`` (default 4 h) so that repeated
+        ``predict`` runs within a day skip the full ESPN re-scrape while still
+        picking up last night's completed games on the first run of the day.
         """
         import datetime as _dt
         current_year = _dt.date.today().year
         cache = self.raw_dir / f"schedule_{season}.parquet"
-        if cache.exists() and season < current_year:
-            logger.info("Loading schedule from cache: %s", cache)
-            return pd.read_parquet(cache)
+
+        if cache.exists():
+            if season < current_year:
+                logger.info("Loading schedule from cache: %s", cache)
+                return pd.read_parquet(cache)
+            # Current season: use cache if it is fresh enough
+            age_hours = (_dt.datetime.now().timestamp() - cache.stat().st_mtime) / 3600
+            if age_hours < cache_ttl_hours:
+                logger.info(
+                    "Loading current-season schedule from cache (%.1f h old): %s",
+                    age_hours, cache,
+                )
+                return pd.read_parquet(cache)
 
         logger.info("Fetching %d season schedule from ESPN …", season)
         games: list[dict] = []
