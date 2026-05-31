@@ -105,7 +105,8 @@ python predict.py evaluate
 
 ## Project structure
 
-\predict.py              # CLI: train / predict / evaluate
+```
+predict.py              # CLI: train / predict / evaluate
 config/config.yaml      # Tunable parameters
 src/
   data/
@@ -124,7 +125,7 @@ models/
   artifacts/            # ATS model weights (gitignored)
   artifacts_ou/         # O/U model weights (gitignored)
 tests/                  # pytest suite
-\
+```
 ---
 
 ## Running tests
