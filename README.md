@@ -52,32 +52,30 @@ pip install -r requirements.txt
 ### Next, train the model
 
 ```bash
-python predict.py train --seasons 2018 2019 2020 2021 2022 2023 2024 2025 2026
+python main.py train --seasons 2018 2019 2020 2021 2022 2023 2024 2025 2026
 ```
 
 ### Finally, generate today's picks
 
 ```bash
-python predict.py predict
+python main.py predict
 ```
 
 Example output:
 
 ```text
-Away      Home      Favorite     Pick       Conf    Mkt Edge
-Storm     Aces      Aces -5.5    AWAY CVR   54.2%   -0.087 *
-Sky       Dream     Pick'em      HOME CVR   51.8%   +0.018
-Fever     Lynx      Lynx -3.0    HOME CVR   53.1%   +0.063 *
+Away      Home      Favorite     Pick       Conf
+Storm     Aces      Aces -5.5    AWAY CVR   54.2% *
+Sky       Dream     Pick'em      HOME CVR   51.8%
+Fever     Lynx      Lynx -3.0    HOME CVR   53.1% *
 
-* = model disagrees with market by >= 5 pp (value bet)
-Mkt Edge = model_prob - market_implied
-           (+ favors home, - favors away)
+* = model confidence exceeds edge threshold
 ```
 
 ### Last (if desired), evaluate Model on Held-Out Test Data
 
 ```bash
-python predict.py evaluate
+python main.py evaluate
 ```
 
 ---
@@ -106,7 +104,7 @@ python predict.py evaluate
 ## Project structure
 
 ```
-predict.py              # CLI: train / predict / evaluate
+main.py                 # CLI: train / predict / evaluate
 config/config.yaml      # Tunable parameters
 src/
   data/

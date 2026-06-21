@@ -1,16 +1,16 @@
 """
-predict.py — CLI entry point for WNBA ATS predictions.
+main.py — CLI entry point for WNBA ATS predictions.
 
 Usage examples
 --------------
 # Full pipeline: fetch data, engineer features, train model, evaluate
-python predict.py train --seasons 2022 2023 2024
+python main.py train --seasons 2022 2023 2024
 
 # Predict today's games (requires ODDS_API_KEY in .env)
-python predict.py predict
+python main.py predict
 
 # Show evaluation report on held-out test set
-python predict.py evaluate --seasons 2022 2023 2024 2025
+python main.py evaluate --seasons 2022 2023 2024 2025
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
-from scipy.stats import norm as _norm
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.data import ESPNScraper, LineMovementProcessor, OddsAPIClient, DataProcessor, ActionNetworkScraper
@@ -180,8 +180,20 @@ def cmd_predict(args: argparse.Namespace, cfg: dict) -> None:
             print(
                 "No upcoming WNBA games found.\n"
                 "Either set ODDS_API_KEY in .env, or supply games manually:\n"
-                "  python predict.py predict --games 'Away Team:Home Team:spread' ..."
+                "  python main.py predict --games 'Away Team:Home Team:spread' ..."
             )
+            return
+
+        # Filter to today's games only (Odds API returns all upcoming games across
+        # multiple days; we only want games starting today in US/Eastern time).
+        _ET = ZoneInfo("America/New_York")
+        _today_et = pd.Timestamp.now(tz=_ET).date()
+        _ct = pd.to_datetime(upcoming_odds["commence_time"], utc=True)
+        upcoming_odds = upcoming_odds[
+            _ct.dt.tz_convert(_ET).dt.date == _today_et
+        ].copy()
+        if upcoming_odds.empty:
+            print("No WNBA games scheduled for today.")
             return
 
         # Attempt to fetch live opening vs. current (closing proxy) snapshots
@@ -247,13 +259,13 @@ def cmd_predict(args: argparse.Namespace, cfg: dict) -> None:
         X[col] = pd.to_numeric(X[col], errors="coerce").fillna(0)
 
     probs = trainer.model.predict_proba(X)[:, 1]
-    min_clv_edge = cfg["betting"].get("min_clv_edge", cfg["betting"]["min_edge"])
+    min_edge = cfg["betting"]["min_edge"]
 
-    print("\n" + "=" * 93)
+    print("\n" + "=" * 80)
     print("  WNBA ATS Picks")
-    print("=" * 93)
-    print(f"  {'Away':^22} {'Home':^22} {'Favorite':^14} {'Pick':^10} {'Conf':^6} {'Mkt Edge':^9}")
-    print("  " + "-" * 88)
+    print("=" * 80)
+    print(f"  {'Away':^22} {'Home':^22} {'Favorite':^14} {'Pick':^10} {'Conf':^6}")
+    print("  " + "-" * 75)
 
     for i, (_, row) in enumerate(upcoming_features.iterrows()):
         spread_val = row.get("spread", float("nan"))
@@ -269,40 +281,23 @@ def cmd_predict(args: argparse.Namespace, cfg: dict) -> None:
                 fav_str = f"{fav_team} {-spread_val:+.1f}"
             else:
                 fav_str = "Pick'em"
-
-            # CLV edge: positive = model more bullish on home than market
-            market_implied = _norm.cdf(-spread_val / 12.0)
-            clv_edge = prob - market_implied
-            edge_str = f"{clv_edge:+.3f}"
-
-            if clv_edge > min_clv_edge:
-                pick, conf, flag = "HOME CVR", prob, " ★"
-            elif clv_edge < -min_clv_edge:
-                pick, conf, flag = "AWAY CVR", 1.0 - prob, " ★"
-            else:
-                # No meaningful disagreement with the market — show but don't flag
-                pick = "HOME CVR" if prob >= 0.5 else "AWAY CVR"
-                conf = prob if prob >= 0.5 else 1.0 - prob
-                flag = ""
         else:
             fav_str = "N/A"
-            edge_str = "N/A"
-            pred = 1 if prob >= 0.5 else 0
-            pick = "HOME CVR" if pred == 1 else "AWAY CVR"
-            conf = prob if pred == 1 else 1.0 - prob
-            flag = " ★" if abs(conf - 0.5) >= min_clv_edge else ""
+
+        pick = "HOME CVR" if prob >= 0.5 else "AWAY CVR"
+        conf = prob if prob >= 0.5 else 1.0 - prob
+        flag = " ★" if abs(conf - 0.5) >= min_edge else ""
 
         home_str = row["home_team"].split()[-1]
         away_str = row["away_team"].split()[-1]
         print(
             f"  {away_str:^22} {home_str:^22} "
-            f"{fav_str:^14} {pick:^10} {conf:.1%}  {edge_str:^9}{flag}"
+            f"{fav_str:^14} {pick:^10} {conf:.1%}{flag}"
         )
 
     print()
-    print("  ★ = model disagrees with market line by ≥ min_clv_edge (value bet)")
-    print("  Mkt Edge = model_prob − market_implied (+ favours home, − favours away)")
-    print("=" * 93 + "\n")
+    print("  ★ = model confidence exceeds edge threshold")
+    print("=" * 80 + "\n")
 
     # --- Over/Under picks (load separate O/U model if available) ---
     ou_artifacts_dir = Path(cfg.get("model", {}).get("ou_artifacts_dir", "models/artifacts_ou"))
@@ -318,9 +313,9 @@ def cmd_predict(args: argparse.Namespace, cfg: dict) -> None:
                 X_ou[col] = pd.to_numeric(X_ou[col], errors="coerce").fillna(0)
             ou_probs = ou_trainer.model.predict_proba(X_ou)[:, 1]
 
-            print("=" * 93)
+            print("=" * 80)
             print("  WNBA O/U Picks")
-            print("=" * 93)
+            print("=" * 80)
             print(f"  {'Away':^22} {'Home':^22} {'Total':^10} {'Pick':^8} {'Conf':^6}")
             print("  " + "-" * 75)
 
@@ -330,7 +325,7 @@ def cmd_predict(args: argparse.Namespace, cfg: dict) -> None:
                 ou_prob = ou_probs[i]
                 ou_pred = "OVER" if ou_prob >= 0.5 else "UNDER"
                 ou_conf = ou_prob if ou_prob >= 0.5 else 1.0 - ou_prob
-                flag = " ★" if abs(ou_conf - 0.5) >= min_clv_edge else ""
+                flag = " ★" if abs(ou_conf - 0.5) >= min_edge else ""
                 home_str2 = row["home_team"].split()[-1]
                 away_str2 = row["away_team"].split()[-1]
                 print(
@@ -338,8 +333,8 @@ def cmd_predict(args: argparse.Namespace, cfg: dict) -> None:
                     f"{total_str:^10} {ou_pred:^8} {ou_conf:.1%}{flag}"
                 )
             print()
-            print("  ★ = model confidence above edge threshold")
-            print("=" * 93 + "\n")
+            print("  ★ = model confidence exceeds edge threshold")
+            print("=" * 80 + "\n")
         except Exception as exc:
             logger.warning("Could not load O/U model: %s", exc)
 
@@ -402,8 +397,7 @@ def cmd_evaluate(args: argparse.Namespace, cfg: dict) -> None:
 
     evaluator = Evaluator()
     # Pass closing spread for CLV computation (feature "spread" = closing spread)
-    spreads = test_df["spread"].values if "spread" in test_df.columns else None
-    report = evaluator.full_report(preds, probs, y_test, meta=test_df, spreads=spreads)
+    report = evaluator.full_report(preds, probs, y_test, meta=test_df)
     evaluator.print_report(report)
 
 

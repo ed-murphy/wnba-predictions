@@ -64,11 +64,8 @@ model:
 betting:
   # Juice / vig assumed on both sides (standard -110)
   vig: -110
-  # Minimum edge required to flag a bet (model-only, no market line available)
+  # Minimum edge required to flag a bet
   min_edge: 0.05
-  # Minimum CLV edge (|model_prob - market_implied|) to recommend a bet
-  # 0.05 = model must disagree with the closing line by ≥5 pp to be flagged
-  min_clv_edge: 0.05
 
 odds_api:
   # Set ODDS_API_KEY in your .env file

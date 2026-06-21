@@ -20,7 +20,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm as _norm
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +49,6 @@ class Evaluator:
         probabilities: np.ndarray,
         actuals: np.ndarray,
         meta: pd.DataFrame | None = None,
-        spreads: pd.Series | np.ndarray | None = None,
     ) -> dict[str, Any]:
         """
         Generate a comprehensive evaluation report.
@@ -66,9 +64,6 @@ class Evaluator:
         meta : DataFrame, optional
             Game metadata (must include 'season' and 'date' columns) for
             breakdowns.
-        spreads : Series or array, optional
-            Closing spread for each game (negative = home favoured).  Used to
-            compute Closing Line Value (CLV).
 
         Returns
         -------
@@ -86,10 +81,6 @@ class Evaluator:
 
         report.update(self._roi_metrics(predictions, probabilities, actuals))
         report["calibration"] = self._calibration_table(probabilities, actuals)
-
-        if spreads is not None:
-            spread_arr = np.asarray(spreads, dtype=float)[mask]
-            report.update(self._clv_metrics(probabilities, actuals, spread_arr))
 
         if meta is not None:
             filt_meta = meta.iloc[mask] if hasattr(meta, "iloc") else meta
@@ -112,21 +103,6 @@ class Evaluator:
         print(f"  Kelly ROI         : {report['kelly_roi']:+.1%}")
         print(f"  Brier score       : {report['brier_score']:.4f}")
         print(f"  Log loss          : {report['log_loss']:.4f}")
-
-        if "mean_clv_all" in report:
-            flag = " (+edge)" if report["mean_clv_all"] > 0 else ""
-            print(f"  Mean CLV (all)    : {report['mean_clv_all']:+.4f}{flag}")
-            print(f"  {'Edge':>6}  {'Bets':>5}  {'Mean CLV':>9}  {'ROI':>8}")
-            print("  " + "-" * 36)
-            for edge in [3, 5, 7]:
-                tag = f"clv{edge:02d}"
-                if f"roi_{tag}" in report:
-                    print(
-                        f"  {edge/100:>6.0%}  "
-                        f"{report[f'bets_{tag}']:>5}  "
-                        f"{report[f'mean_clv_{tag}']:>+9.4f}  "
-                        f"{report[f'roi_{tag}']:>+8.1%}"
-                    )
 
         if "by_season" in report:
             print("\n  Season Breakdown:")
@@ -233,64 +209,6 @@ class Evaluator:
                 }
             )
         return rows
-
-    @staticmethod
-    def _clv_metrics(
-        probabilities: np.ndarray,
-        actuals: np.ndarray,
-        spreads: np.ndarray,
-        sigma: float = 12.0,
-    ) -> dict:
-        """Compute Closing Line Value (CLV) metrics.
-
-        CLV measures whether the model systematically "beats the closing line"
-        — a key indicator of genuine market edge independent of short-term
-        results.  A positive mean CLV over a large sample is strong evidence
-        that the model is pricing games better than the closing market.
-
-        Parameters
-        ----------
-        probabilities : array of float
-            Model-predicted probability of home covering.
-        actuals : array of int
-            Ground-truth ATS outcomes (unused here, kept for API symmetry).
-        spreads : array of float
-            Closing spread for each game (negative = home favoured).
-        sigma : float
-            Standard deviation of game margins used to convert spread →
-            probability.  WNBA historical σ ≈ 12 points.
-        """
-        # Implied home win probability from closing spread: Φ(−spread / σ)
-        closing_implied = _norm.cdf(-spreads / sigma)
-        clv = probabilities - closing_implied  # + = model more bullish on home
-        valid = ~np.isnan(closing_implied)
-
-        result: dict = {}
-        if valid.sum() == 0:
-            return result
-
-        result["mean_clv_all"] = float(np.nanmean(clv[valid]))
-
-        # CLV-aware betting: bet home when model > market + threshold,
-        #                    bet away when market > model + threshold
-        for edge in [0.03, 0.05, 0.07]:
-            bet_home = valid & (clv > edge)
-            bet_away = valid & (clv < -edge)
-            n_bets = int(bet_home.sum() + bet_away.sum())
-            if n_bets == 0:
-                continue
-            wins = float(
-                actuals[bet_home].sum() + (1 - actuals[bet_away]).sum()
-            )
-            roi = (wins * (_WIN_PAYOUT / _VIG) - (n_bets - wins)) / n_bets
-            tag = f"clv{int(edge * 100):02d}"
-            result[f"roi_{tag}"] = round(roi, 4)
-            result[f"bets_{tag}"] = n_bets
-            result[f"mean_clv_{tag}"] = round(
-                float(np.nanmean(clv[bet_home | bet_away])), 4
-            )
-
-        return result
 
     @staticmethod
     def _by_season(

@@ -96,7 +96,7 @@ class ActionNetworkScraper:
             game_id, commence_time, home_team, away_team, home_spread
 
         The format is compatible with ``_build_upcoming_game_rows`` in
-        predict.py so it can be used as a no-key alternative to the Odds API.
+        main.py so it can be used as a no-key alternative to the Odds API.
         Today's data is always fetched fresh (not from cache) so the spread
         reflects the current line rather than the morning open.
         """
